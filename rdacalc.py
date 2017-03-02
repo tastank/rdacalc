@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import argparse
 import datetime
+import numpy as np
 import os
 import pygrib
 import tempfile
@@ -32,6 +33,45 @@ def download_hrrr_prsf(fh, issue_time=HRRR_TIME, dir_=DIR):
     ftp.retrbinary("RETR {}".format(hrrr_fn), open(local_hrrr_fn, 'wb').write)
     return local_hrrr_fn
 
+def get_temp_grib(grib):
+    temp_grib = []
+    for g in grib:
+        if g.name == "Temperature" and g.typeOfLevel == "isobaricInhPa":
+            temp_grib.append(g)
+    grib.rewind()
+    return sorted(temp_grib, key=level_key, reverse=True)
+
+def get_hght_grib(grib):
+    hght_grib = []
+    for g in grib:
+        if g.name == "Geopotential Height" and g.typeOfLevel == "isobaricInhPa":
+            hght_grib.append(g)
+    grib.rewind()
+    return sorted(hght_grib, key=level_key, reverse=True)
+
+def get_rh_grib(grib):
+    rh_grib = []
+    for g in grib:
+        if g.name == "Relative humidity" and g.typeOfLevel == "isobaricInhPa":
+            rh_grib.append(g)
+    grib.rewind()
+    return sorted(rh_grib, key=level_key, reverse=True)
+
+# Sort grib entries by level
+def level_key(g):
+    return g.level
+
+# Returns the index of the closest point on a lat, lon grid to the specified lat, lon
+def find_nearest_idx(shape, lats, lons, lat, lon):
+    # for an unknown reason, pygrib gives lons and lats as 1-dimensional arrays, values as a 2-d array
+    lats = np.reshape(lats, shape)
+    lons = np.reshape(lons, shape)
+    lons[lons>180] -= 360
+    difflats = lats - lat
+    difflons = lons - lon
+    diffs = (difflats**2 + difflons**2)
+    return np.where(diffs==np.min(diffs))
+
 # Returns air density in g/m^3given pressure in mb, temp in K, and rh
 def density(press, temp, rh):
 # from https://wahiduddin.net/calc/density_altitude.htm
@@ -58,26 +98,6 @@ def geopotential_to_geometric(alt):
     E = 6356.766 # Radius of earth, in km
     return E*alt / (E-alt)
 
-# Sort grib entries by level
-def level_key(g):
-    return g.level
-
-def get_temp_grib(grib):
-    temp_grib = []
-    for g in grib:
-        if g.name == "Temperature" and g.typeOfLevel == "isobaricInhPa":
-            temp_grib.append(g)
-    grib.rewind()
-    return sorted(temp_grib, key=level_key, reverse=True)
-
-def get_hght_grib(grib):
-    hght_grib = []
-    for g in grib:
-        if g.name == "Geopotential Height" and g.typeOfLevel == "isobaricInhPa":
-            hght_grib.append(g)
-    grib.rewind()
-    return sorted(hght_grib, key=level_key, reverse=True)
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions")
@@ -91,16 +111,33 @@ if __name__ == "__main__":
     if args.grib_file is None:
         download = True
         clean_up = True
+    else:
+        download = False
+        clean_up = False
 
     if download:
-        local_hrrr_fn = download_hrrr_prsf(fh)
+        local_hrrr_fn = download_hrrr_prsf(args.hour)
     else:
         local_hrrr_fn = args.grib_file
-    # HRRR pressure field files are pretty large, so extract what is needed from each then remove it
-    grib = pygrib.open(hrrr_fn)
+    grib = pygrib.open(local_hrrr_fn)
     temp_grib = get_temp_grib(grib)
     hght_grib = get_hght_grib(grib)
     rh_grib = get_rh_grib(grib)
-
+    # HRRR files are large, so remove as soon as it's no longer needed
     if clean_up:
         os.remove(local_hrrr_fn)
+
+    if len(temp_grib) != len(hght_grib) or len(temp_grib) != len(rh_grib):
+        raise IndexError("Temp, height, and humidity fields do not have same length!")
+    ix, iy = find_nearest_idx(temp_grib[0].values.shape,
+            temp_grib[0].latitudes, temp_grib[0].longitudes,
+            args.lat, args.lon)
+    for i in range(len(temp_grib)):
+        if temp_grib[i].level != rh_grib[i].level:
+            raise ValueError("Temp/RH level mismatch!")
+        level = temp_grib[i].level
+        temp = temp_grib[i].values[ix][iy]
+        rh = rh_grib[i].values[ix][iy] / 100.0
+        da = density_alt(density(level, temp, rh))
+        print level, temp, rh, da
+
