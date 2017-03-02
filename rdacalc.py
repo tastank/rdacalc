@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import argparse
 import datetime
 import os
 import pygrib
@@ -44,6 +45,14 @@ def get_hght_grib(grib):
     return sorted(hght_grib, key=level_key, reverse=True)
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions")
+    parser.add_argument("DA", help="Desired density altitude")
+    parser.add_argument("lat", help="Latitude")
+    parser.add_argument("lon", help="Longitude")
+    parser.add_argument("--grib-file", help="Grib or Grib2 file to use; will download latest HRRR if not specified")
+    parser.add_argument("--hour", help="Which hour to consider, from one hour ago (default 1)")
+    args = parser.parse_args()
 
     # Downlaod HRRR files for forecast hours 0-3
     for fh in range(0, 3+1):
