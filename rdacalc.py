@@ -92,17 +92,15 @@ if __name__ == "__main__":
         download = True
         clean_up = True
 
-    # Downlaod HRRR files for forecast hours 0-3
-    for fh in range(0, 3+1):
-        if download:
-            local_hrrr_fn = download_hrrr_prsf(fh)
-        else:
-            local_hrrr_fn = args.grib_file
-        # HRRR pressure field files are pretty large, so extract what is needed from each then remove it
-        grib = pygrib.open(hrrr_fn)
-        temp_grib = get_temp_grib(grib)
-        hght_grib = get_hght_grib(grib)
-        rh_grib = get_rh_grib(grib)
+    if download:
+        local_hrrr_fn = download_hrrr_prsf(fh)
+    else:
+        local_hrrr_fn = args.grib_file
+    # HRRR pressure field files are pretty large, so extract what is needed from each then remove it
+    grib = pygrib.open(hrrr_fn)
+    temp_grib = get_temp_grib(grib)
+    hght_grib = get_hght_grib(grib)
+    rh_grib = get_rh_grib(grib)
 
-        if clean_up:
-            os.remove(local_hrrr_fn)
+    if clean_up:
+        os.remove(local_hrrr_fn)
