@@ -38,7 +38,7 @@ def get_temp_grib(grib):
 def get_hght_grib(grib):
     hght_grib = []
     for g in grib:
-        if g.name == "Temperature" and g.typeOfLevel == "isobaricInhPa":
+        if g.name == "Geopotential Height" and g.typeOfLevel == "isobaricInhPa":
             hght_grib.append(g)
     grib.rewind()
     return sorted(hght_grib, key=level_key, reverse=True)
