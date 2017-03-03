@@ -7,6 +7,7 @@ import pygrib
 import tempfile
 from ftplib import FTP
 
+# TODO extract downloading to another file so it can be done separately
 DIR = tempfile.mkdtemp()
 # This script may run over several minutes, so use one time rather than multiple utcnow() calls
 HRRR_TIME = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
