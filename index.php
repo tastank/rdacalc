@@ -53,7 +53,7 @@ Note: this calculator only works with latitudes and longitudes within the contig
     </select>
   </td>
 </tr><tr>
-  <td>
+  <td valign="top">
     <input type="submit" name="submit" value="Calculate MSL altitude" /><br />
     <input type="submit" name="table" value="Show full DA table" /><br />
   </td>
