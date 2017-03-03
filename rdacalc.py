@@ -22,6 +22,16 @@ L = 6.5     # Temp lapse rate in K/km
 R = 8.31432 # Gas constant, J/mol*K
 M = 28.9644 # Molecular weight of dry air, g/mol
 
+# TODO replace this with scipy.interp1d after I get the internet back
+# Find the point the same distance along [y0, y1] as x is along [x0, x1]
+def interp1d(x0, x1, x, y0, y1):
+    x_range = x1 - x0
+    y_range = y1 - y0
+    dx = x - x0
+    x_frac = dx / x_range
+    return x_frac * y_range + y0
+
+
 # Download HRRR file given forecast hour, issue time, and directory
 def download_hrrr_prsf(fh, issue_time=HRRR_TIME, dir_=DIR):
     hrrr_dir = issue_time.strftime(HRRR_DIR)
@@ -101,7 +111,7 @@ def geopotential_to_geometric(alt):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions")
-    parser.add_argument("DA", help="Desired density altitude")
+    parser.add_argument("DA", type=float, help="Desired density altitude")
     parser.add_argument("lat", type=float, help="Latitude")
     parser.add_argument("lon", type=float, help="Longitude")
     parser.add_argument("--grib-file", type=str, default=None, help="Grib or Grib2 file to use; will download latest HRRR if not specified")
@@ -134,14 +144,29 @@ if __name__ == "__main__":
             args.lat, args.lon)
     ix, iy = idx[0][0], idx[1][0]
     print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
+    prev_da = None
+    prev_hght = None
+    done = False
     for i in range(len(temp_grib)):
         if temp_grib[i].level != rh_grib[i].level:
             raise ValueError("Temp/RH level mismatch!")
         level = temp_grib[i].level
+        hght = hght_grib[i].values[ix][iy] * 3.28 # m to ft
         temp = temp_grib[i].values[ix][iy]
-        hght = hght_grib[i].values[ix][iy]
         rh = rh_grib[i].values[ix][iy] / 100.0
-        da = density_alt(density(level, temp, rh))
+        da = density_alt(density(level, temp, rh))*3280 #km to ft
         print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
-                level, temp-273.15, rh*100, da*1000*3.28, hght*3.28)
+                level, temp-273.15, rh*100, da, hght)
+        if da > args.DA:
+            if prev_da is None:
+                # TODO Is this the appropriate error type?
+                raise ValueError("Unable to interpolate: specified density altitude below lowest found DA.")
+            print "Interpolated GPH for {} density altitude: {}".format(args.DA, interp1d(prev_da, da, args.DA, prev_hght, hght))
+            done = True
+            break
+        prev_da = da
+        prev_hght = hght
+
+    if not done:
+        raise ValueError("Unable to interpolate: specified density altitude above highest found DA.")
 
