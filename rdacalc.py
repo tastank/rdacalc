@@ -6,14 +6,11 @@ import os
 import pygrib
 import tempfile
 from ftplib import FTP
+# local imports
+from download_hrrr import download_hrrr_prsf
 
 # TODO extract downloading to another file so it can be done separately
 DIR = tempfile.mkdtemp()
-# This script may run over several minutes, so use one time rather than multiple utcnow() calls
-HRRR_TIME = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-HRRR_FTP = "ftp.ncep.noaa.gov"
-HRRR_DIR = "/pub/data/nccf/com/hrrr/prod/hrrr.%Y%m%d/"
-HRRR_FN = "hrrr.t%Hz.wrfprsf{:0>2}.grib2"
 
 # ISA constants, found at https://wahiduddin.net/calc/density_altitude.htm
 P0 = 101325 # MSL pressure, in Pa
@@ -31,18 +28,6 @@ def interp1d(x0, x1, x, y0, y1):
     dx = x - x0
     x_frac = dx / x_range
     return x_frac * y_range + y0
-
-
-# Download HRRR file given forecast hour, issue time, and directory
-def download_hrrr_prsf(fh, issue_time=HRRR_TIME, dir_=DIR):
-    hrrr_dir = issue_time.strftime(HRRR_DIR)
-    hrrr_fn = issue_time.strftime(HRRR_FN).format(fh)
-    local_hrrr_fn = os.path.join(dir_, hrrr_fn)
-    ftp = FTP(HRRR_FTP)
-    ftp.login()
-    ftp.cwd(hrrr_dir)
-    ftp.retrbinary("RETR {}".format(hrrr_fn), open(local_hrrr_fn, 'wb').write)
-    return local_hrrr_fn
 
 def get_temp_grib(grib):
     temp_grib = []
@@ -133,8 +118,10 @@ if __name__ == "__main__":
         clean_up = False
 
     if download:
-        local_hrrr_fn = download_hrrr_prsf(args.hour)
+        hrrr_dir = tempfile.mkdtemp()
+        local_hrrr_fn = download_hrrr_prsf(args.hour, dir_=hrrr_dir)
     else:
+        hrrr_dir = None
         local_hrrr_fn = args.grib_file
     grib = pygrib.open(local_hrrr_fn)
     temp_grib = get_temp_grib(grib)
@@ -143,6 +130,7 @@ if __name__ == "__main__":
     # HRRR files are large, so remove as soon as it's no longer needed
     if clean_up:
         os.remove(local_hrrr_fn)
+        os.rmdir(hrrr_dir)
 
     if args.km:
         unit = "km"
