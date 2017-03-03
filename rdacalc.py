@@ -187,7 +187,7 @@ if __name__ == "__main__":
             da_str = alt_fmt.format(args.DA)
             interp_gph = interp1d(prev_da, da, args.DA, prev_gph, gph)
             gph_str = alt_fmt.format(interp_gph)
-            if args.units:
+            if args.print_units:
                 da_str += unit
                 gph_str += unit
             done = True
