@@ -110,12 +110,16 @@ def geopotential_to_geometric(alt):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions")
+    parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions. Default unit is feet; others may be specified as options.")
     parser.add_argument("DA", type=float, help="Desired density altitude")
     parser.add_argument("lat", type=float, help="Latitude")
     parser.add_argument("lon", type=float, help="Longitude")
     parser.add_argument("--grib-file", type=str, default=None, help="Grib or Grib2 file to use; will download latest HRRR if not specified")
     parser.add_argument("--hour", type=int, default=1, help="Which hour to consider, from one hour ago (default 1)")
+    # TODO parse 'km' or 'm' from end of args.DA to determine unit
+    parser.add_argument("--meters", "-m", action="store_true", help="Input and output in meters")
+    parser.add_argument("--km", action="store_true", help="Input and output in meters")
+    parser.add_argument("--verbose", "-v", action="count", help="Be verbose")
 
     args = parser.parse_args()
     if args.grib_file is None:
@@ -143,7 +147,8 @@ if __name__ == "__main__":
             temp_grib[0].latitudes, temp_grib[0].longitudes,
             args.lat, args.lon)
     ix, iy = idx[0][0], idx[1][0]
-    print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
+    if args.verbose >= 1:
+        print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
     prev_da = None
     prev_hght = None
     done = False
@@ -151,19 +156,31 @@ if __name__ == "__main__":
         if temp_grib[i].level != rh_grib[i].level:
             raise ValueError("Temp/RH level mismatch!")
         level = temp_grib[i].level
-        hght = hght_grib[i].values[ix][iy] * 3.28 # m to ft
         temp = temp_grib[i].values[ix][iy]
         rh = rh_grib[i].values[ix][iy] / 100.0
-        da = density_alt(density(level, temp, rh))*3280 #km to ft
-        print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
-                level, temp-273.15, rh*100, da, hght)
-        if da > args.DA:
+        if args.meters:
+            da = density_alt(density(level, temp, rh))*1000 #km to m
+            hght = hght_grib[i].values[ix][iy]
+            unit = "m"
+        elif args.km:
+            da = density_alt(density(level, temp, rh))
+            hght = hght_grib[i].values[ix][iy] / 1000 # m to km
+            unit = "km"
+        else: # Default unit is feet
+            da = density_alt(density(level, temp, rh))*3280 #km to ft
+            hght = hght_grib[i].values[ix][iy] * 3.28 # m to ft
+            unit = "ft"
+        if args.verbose >= 1:
+            print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
+                    level, temp-273.15, rh*100, da, hght)
+        if da > args.DA and prev_da < args.DA:
             if prev_da is None:
                 # TODO Is this the appropriate error type?
                 raise ValueError("Unable to interpolate: specified density altitude below lowest found DA.")
-            print "Interpolated GPH for {} density altitude: {}".format(args.DA, interp1d(prev_da, da, args.DA, prev_hght, hght))
+            print "Interpolated GPH for {0:<.5g}{2} density altitude: {1:<.5g}{2}".format(args.DA, interp1d(prev_da, da, args.DA, prev_hght, hght), unit)
             done = True
-            break
+            if args.verbose == 0:
+                break
         prev_da = da
         prev_hght = hght
 
