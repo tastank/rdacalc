@@ -21,6 +21,9 @@ if (isset($_POST["da"]) && isset($_POST["lat"]) && isset($_POST["lon"])) {
     if (isset($unit_arg)) {
         $python_cmd .= " " . $unit_arg;
     }
+    if (isset($_POST["table"])) {
+        $python_cmd .= " -vvu";
+    }
     $ceiling = shell_exec(escapeshellcmd($python_cmd));
 }
 ?>
@@ -30,7 +33,8 @@ if (isset($_POST["da"]) && isset($_POST["lat"]) && isset($_POST["lon"])) {
 </head>
 <body>
 Note: this calculator only works with latitudes and longitudes within the contiguous United States and some nearby regions.<br />
-<a href="http://www.nco.ncep.noaa.gov/pmb/docs/on388/tableb.html#GRID130">Technical specification of coverage area</a> <a href="http://www.nco.ncep.noaa.gov/pmb/docs/on388/grids/grid130.gif">Graphical depiction of coverage area</a>
+<a href="http://www.nco.ncep.noaa.gov/pmb/docs/on388/tableb.html#GRID130">Technical specification of coverage area</a> <a href="http://www.nco.ncep.noaa.gov/pmb/docs/on388/grids/grid130.gif">Graphical depiction of coverage area</a><br />
+<a href="https://github.com/tastank/rdacalc/tree/service_ceiling_webapp">Source</a>
 <form method="POST">
 <table>
 <tr>
@@ -49,7 +53,11 @@ Note: this calculator only works with latitudes and longitudes within the contig
     </select>
   </td>
 </tr><tr>
-<td><input type="submit" name="submit" value="Calculate MSL altitude" /></td><td><?php if (isset($ceiling)) {echo $ceiling;} ?></td>
+  <td>
+    <input type="submit" name="submit" value="Calculate MSL altitude" /><br />
+    <input type="submit" name="table" value="Show full DA table" /><br />
+  </td>
+  <td><pre><?php if (isset($ceiling)) {echo $ceiling;} ?></pre></td>
 </tr>
 </table>
 </form>
