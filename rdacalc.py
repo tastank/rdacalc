@@ -51,13 +51,13 @@ def get_temp_grib(grib):
     grib.rewind()
     return sorted(temp_grib, key=level_key, reverse=True)
 
-def get_hght_grib(grib):
-    hght_grib = []
+def get_gph_grib(grib):
+    gph_grib = []
     for g in grib:
         if g.name == "Geopotential Height" and g.typeOfLevel == "isobaricInhPa":
-            hght_grib.append(g)
+            gph_grib.append(g)
     grib.rewind()
-    return sorted(hght_grib, key=level_key, reverse=True)
+    return sorted(gph_grib, key=level_key, reverse=True)
 
 def get_rh_grib(grib):
     rh_grib = []
@@ -135,13 +135,13 @@ if __name__ == "__main__":
         local_hrrr_fn = args.grib_file
     grib = pygrib.open(local_hrrr_fn)
     temp_grib = get_temp_grib(grib)
-    hght_grib = get_hght_grib(grib)
+    gph_grib = get_gph_grib(grib)
     rh_grib = get_rh_grib(grib)
     # HRRR files are large, so remove as soon as it's no longer needed
     if clean_up:
         os.remove(local_hrrr_fn)
 
-    if len(temp_grib) != len(hght_grib) or len(temp_grib) != len(rh_grib):
+    if len(temp_grib) != len(gph_grib) or len(temp_grib) != len(rh_grib):
         raise IndexError("Temp, height, and humidity fields do not have same length!")
     idx = find_nearest_idx(temp_grib[0].values.shape,
             temp_grib[0].latitudes, temp_grib[0].longitudes,
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     if args.verbose >= 1:
         print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
     prev_da = None
-    prev_hght = None
+    prev_gph = None
     done = False
     for i in range(len(temp_grib)):
         if temp_grib[i].level != rh_grib[i].level:
@@ -160,29 +160,29 @@ if __name__ == "__main__":
         rh = rh_grib[i].values[ix][iy] / 100.0
         if args.meters:
             da = density_alt(density(level, temp, rh))*1000 #km to m
-            hght = hght_grib[i].values[ix][iy]
+            gph = gph_grib[i].values[ix][iy]
             unit = "m"
         elif args.km:
             da = density_alt(density(level, temp, rh))
-            hght = hght_grib[i].values[ix][iy] / 1000 # m to km
+            gph = gph_grib[i].values[ix][iy] / 1000 # m to km
             unit = "km"
         else: # Default unit is feet
             da = density_alt(density(level, temp, rh))*3280 #km to ft
-            hght = hght_grib[i].values[ix][iy] * 3.28 # m to ft
+            gph = gph_grib[i].values[ix][iy] * 3.28 # m to ft
             unit = "ft"
         if args.verbose >= 1:
             print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
-                    level, temp-273.15, rh*100, da, hght)
+                    level, temp-273.15, rh*100, da, gph)
         if da > args.DA and prev_da < args.DA:
             if prev_da is None:
                 # TODO Is this the appropriate error type?
                 raise ValueError("Unable to interpolate: specified density altitude below lowest found DA.")
-            print "Interpolated GPH for {0:<.5g}{2} density altitude: {1:<.5g}{2}".format(args.DA, interp1d(prev_da, da, args.DA, prev_hght, hght), unit)
+            print "Interpolated GPH for {0:<.5g}{2} density altitude: {1:<.5g}{2}".format(args.DA, interp1d(prev_da, da, args.DA, prev_gph, gph), unit)
             done = True
             if args.verbose == 0:
                 break
         prev_da = da
-        prev_hght = hght
+        prev_gph = gph
 
     if not done:
         raise ValueError("Unable to interpolate: specified density altitude above highest found DA.")
