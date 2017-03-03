@@ -151,7 +151,7 @@ if __name__ == "__main__":
     else:
         unit = "ft"
     if args.gph:
-        unit = "gp{}".format(unit)
+        unit = "gp" + unit
 
     if args.verbose >= 2:
         alt_str_len = 6 + len(unit)
@@ -202,8 +202,8 @@ if __name__ == "__main__":
             interp_hght = interp1d(prev_da, da, args.DA, prev_hght, hght)
             hght_str = alt_fmt.format(interp_hght)
             if args.print_units:
-                da_str += unit
-                hght_str += unit
+                da_str += " " + unit
+                hght_str += " " + unit
             done = True
             if args.verbose <= 1:
                 break
