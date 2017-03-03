@@ -24,7 +24,7 @@ products = {
         "available": "Yesterday through one hour ago",
         "full_name": "HRRR Pressure Fields, 3km CONUS"
     },
-    "rap_218": {
+    "rap_130": {
         "latest": RAP_TIME,
         "ftp_dir": RAP_DIR,
         "fn": RAP_AWIP_FN,
@@ -50,7 +50,7 @@ def download_ncep_model_data(product="hrrr_prsf", fh=1, issue_time=None, dir_='.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download NCEP model data. All times are UTC.")
     parser.add_argument("--dir", "-d", default='.', help="Directory to save files, default ./")
-    parser.add_argument("--product", "-p", default="hrrr_prsf", help="Product to download. One of {hrrr_prsf, rap_218}")
+    parser.add_argument("--product", "-p", default="hrrr_prsf", help="Product to download. One of {hrrr_prsf, rap_130}")
     parser.add_argument("--date", default=HRRR_TIME.strftime("%Y%m%d"), help="YYYYMMDD UTC date of model to download. Availability depends on product.")
     parser.add_argument("--hour", type=int, default=HRRR_TIME.hour, help="UTC model run hour to download, default one hour ago")
     parser.add_argument("--fh", type=int, default=1, help="Forecast hour to download, default 1")

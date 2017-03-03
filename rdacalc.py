@@ -120,7 +120,7 @@ if __name__ == "__main__":
         if args.model == "hrrr":
             product = "hrrr_prsf"
         elif args.model == "rap":
-            product = "rap_218"
+            product = "rap_130"
         local_model_fn = download_ncep.download_ncep_model_data(
                 product=product,
                 fh=args.hour,
