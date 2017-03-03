@@ -23,10 +23,10 @@ def download_hrrr_prsf(fh, issue_time=HRRR_TIME, dir_='.'):
     return local_hrrr_fn
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download HRRR data.")
-    parser.add_argument("--dir", "-d", default='.', help="Directory to save HRRR file")
-    parser.add_argument("--date", default=HRRR_TIME.strftime("%Y%m%d"), help="YYYYMMDD UTC date of HRRR model to download. Only today and yesterday will be available.")
-    parser.add_argument("--hour", "-h", type=int, default=HRRR_TIME.hour, help="UTC model run hour to download (default one hour ago)")
+    parser = argparse.ArgumentParser(description="Download HRRR pressure field data.")
+    parser.add_argument("--dir", "-d", default='.', help="Directory to save HRRR file, default ./")
+    parser.add_argument("--date", default=HRRR_TIME.strftime("%Y%m%d"), help="YYYYMMDD UTC date of HRRR model to download. Only today and yesterday will be available, default today.")
+    parser.add_argument("--hour", type=int, default=HRRR_TIME.hour, help="UTC model run hour to download, default one hour ago")
     parser.add_argument("--fh", type=int, default=1, help="Forecast hour to download (0-18), default 1")
 
     args = parser.parse_args()
