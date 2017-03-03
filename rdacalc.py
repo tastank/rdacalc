@@ -7,10 +7,7 @@ import pygrib
 import tempfile
 from ftplib import FTP
 # local imports
-from download_hrrr import download_hrrr_prsf
-
-# TODO extract downloading to another file so it can be done separately
-DIR = tempfile.mkdtemp()
+import download_ncep
 
 # ISA constants, found at https://wahiduddin.net/calc/density_altitude.htm
 P0 = 101325 # MSL pressure, in Pa
@@ -104,6 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--hour", type=int, default=1, help="Which hour to consider, from one hour ago (default 1)")
     # TODO parse 'km' or 'm' from end of args.DA to determine unit
     parser.add_argument("--meters", "-m", action="store_true", help="Input and output in meters")
+    parser.add_argument("--model", default="rap", help="Which model to use. One of {hrrr, rap}, default hrrr (rap uses less memory)")
     parser.add_argument("--km", action="store_true", help="Input and output in meters")
     parser.add_argument("--print-units", "-u", action="store_true", help="Print units")
     parser.add_argument("--gph", action="store_true", help="Print geopotential height instead of geometric height")
@@ -118,8 +116,15 @@ if __name__ == "__main__":
         clean_up = False
 
     if download:
-        hrrr_dir = tempfile.mkdtemp()
-        local_hrrr_fn = download_hrrr_prsf(args.hour, dir_=hrrr_dir)
+        model_dir = tempfile.mkdtemp()
+        if model == "hrrr":
+            product = "hrrr_prsf"
+        elif model == "rap":
+            product = "rap_218"
+        local_model_fn = download_ncep.download_ncep_model_data(
+                product=product,
+                fh=args.hour,
+                dir_=hrrr_dir)
     else:
         hrrr_dir = None
         local_hrrr_fn = args.grib_file
