@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--hour", type=int, default=1, help="Which hour to consider, from one hour ago (default 1)")
     # TODO parse 'km' or 'm' from end of args.DA to determine unit
     parser.add_argument("--meters", "-m", action="store_true", help="Input and output in meters")
-    parser.add_argument("--model", default="rap", help="Which model to use. One of {hrrr, rap}, default hrrr (rap uses less memory)")
+    parser.add_argument("--model", default="rap", help="Which model to use. One of {hrrr, rap}, default rap (hrrr uses lots of memory but is more accurate)")
     parser.add_argument("--km", action="store_true", help="Input and output in meters")
     parser.add_argument("--print-units", "-u", action="store_true", help="Print units")
     parser.add_argument("--gph", action="store_true", help="Print geopotential height instead of geometric height")
@@ -117,9 +117,9 @@ if __name__ == "__main__":
 
     if download:
         model_dir = tempfile.mkdtemp()
-        if model == "hrrr":
+        if args.model == "hrrr":
             product = "hrrr_prsf"
-        elif model == "rap":
+        elif args.model == "rap":
             product = "rap_218"
         local_model_fn = download_ncep.download_ncep_model_data(
                 product=product,
