@@ -129,15 +129,19 @@ if __name__ == "__main__":
 
     if len(temp_grib) != len(hght_grib) or len(temp_grib) != len(rh_grib):
         raise IndexError("Temp, height, and humidity fields do not have same length!")
-    ix, iy = find_nearest_idx(temp_grib[0].values.shape,
+    idx = find_nearest_idx(temp_grib[0].values.shape,
             temp_grib[0].latitudes, temp_grib[0].longitudes,
             args.lat, args.lon)
+    ix, iy = idx[0][0], idx[1][0]
+    print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
     for i in range(len(temp_grib)):
         if temp_grib[i].level != rh_grib[i].level:
             raise ValueError("Temp/RH level mismatch!")
         level = temp_grib[i].level
         temp = temp_grib[i].values[ix][iy]
+        hght = hght_grib[i].values[ix][iy]
         rh = rh_grib[i].values[ix][iy] / 100.0
         da = density_alt(density(level, temp, rh))
-        print level, temp, rh, da
+        print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
+                level, temp-273.15, rh*100, da*1000*3.28, hght*3.28)
 
