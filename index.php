@@ -16,7 +16,7 @@ if (isset($_POST["da"]) && isset($_POST["lat"]) && isset($_POST["lon"])) {
     $lat = $_POST["lat"];
     $lon = $_POST["lon"];
     $da = $_POST["da"];
-    $rap_file = shell_exec("python update_rap.py -v");
+    $rap_file = shell_exec("python update_rap.py -p");
     $python_cmd = "python rdacalc.py --grib-file " . $rap_file . " " . $da . " " . $lat . " " . $lon;
     if (isset($unit_arg)) {
         $python_cmd .= " " . $unit_arg;

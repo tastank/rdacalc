@@ -16,13 +16,17 @@ def is_latest(f):
 # Remove all old RAP files. Keep only the latest one; if all are >1h old, download the latest.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update RAP file in this directory if a newer file exists")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Print the name of the latest stored RAP file")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Print the name of the latest stored RAP file after downloading if necessary")
+    parser.add_argument("--print-only", "-p", action="store_true", help="Print latest sotred RAP file and exit immediately")
     args = parser.parse_args()
 
     ls = os.listdir(".")
     rapfiles = [f for f in ls if f.startswith("rap.t")]
     download = True
-    for f in rapfiles:
+    for f in sorted(rapfiles, reverse=True):
+        if args.print_only:
+            print f
+            exit()
         if is_latest(f):
             latest_fn = f
             rapfiles.remove(f)
