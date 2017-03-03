@@ -102,8 +102,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Reverse Density Altitude Calculator: calculate the altitude MSL at which the density altitude is equal to the specified density altitude in current conditions, as specified by the HRRR model. Useful for calculating an aircraft's effective service ceiling in non-standard conditions")
     parser.add_argument("DA", help="Desired density altitude")
-    parser.add_argument("lat", help="Latitude")
-    parser.add_argument("lon", help="Longitude")
+    parser.add_argument("lat", type=float, help="Latitude")
+    parser.add_argument("lon", type=float, help="Longitude")
     parser.add_argument("--grib-file", type=str, default=None, help="Grib or Grib2 file to use; will download latest HRRR if not specified")
     parser.add_argument("--hour", type=int, default=1, help="Which hour to consider, from one hour ago (default 1)")
 
