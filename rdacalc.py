@@ -120,6 +120,7 @@ if __name__ == "__main__":
     parser.add_argument("--meters", "-m", action="store_true", help="Input and output in meters")
     parser.add_argument("--km", action="store_true", help="Input and output in meters")
     parser.add_argument("--print-units", "-u", action="store_true", help="Print units")
+    parser.add_argument("--gph", action="store_true", help="Print geopotential height instead of geometric height")
     parser.add_argument("--verbose", "-v", action="count", help="Be verbose")
 
     args = parser.parse_args()
@@ -148,16 +149,22 @@ if __name__ == "__main__":
         unit = "m"
     else:
         unit = "ft"
+    if args.gph:
+        unit = "gp{}".format(unit)
+
     if args.verbose >= 2:
-        print "Press (mb) | Temp (C) | RH (%) | DA (gp {0:<2}) | MSL (gp {0:<2})".format(unit)
+        alt_str_len = 6 + len(unit)
+        print "Press (mb) | Temp (C) | RH (%) | DA  ({0}) | MSL ({0})".format(unit)
+
     if len(temp_grib) != len(gph_grib) or len(temp_grib) != len(rh_grib):
         raise IndexError("Temp, height, and humidity fields do not have same length!")
     idx = find_nearest_idx(temp_grib[0].values.shape,
             temp_grib[0].latitudes, temp_grib[0].longitudes,
             args.lat, args.lon)
     ix, iy = idx[0][0], idx[1][0]
+
     prev_da = None
-    prev_gph = None
+    prev_hght = None
     done = False
     for i in range(len(temp_grib)):
         if temp_grib[i].level != rh_grib[i].level:
@@ -165,42 +172,49 @@ if __name__ == "__main__":
         level = temp_grib[i].level
         temp = temp_grib[i].values[ix][iy]
         rh = rh_grib[i].values[ix][iy] / 100.0
-        if unit == "m":
-            da = density_alt(density(level, temp, rh))*1000 #km to m
-            gph = gph_grib[i].values[ix][iy]
-            unit = "m"
-        elif unit == "km":
-            da = density_alt(density(level, temp, rh))
-            gph = gph_grib[i].values[ix][iy] / 1000 # m to km
-            unit = "km"
-        else: # Default unit is feet
-            da = density_alt(density(level, temp, rh))*3280 #km to ft
-            gph = gph_grib[i].values[ix][iy] * 3.28 # m to ft
+        da = density_alt(density(level, temp, rh))
+        gph = gph_grib[i].values[ix][iy] / 1000.0 # m to km
+
+        if args.gph:
+            hght = gph
+        else:
+            da = geopotential_to_geometric(da)
+            hght = geopotential_to_geometric(gph)
+
+        if unit == "m" or unit == "gpm":
+            da *= 1000.0
+            hght *= 1000.0
+        elif unit == "ft" or unit == "gpft":
+            da *= 3280.0
+            hght *= 3280.0
+
         if args.verbose >= 2:
-            print "{:>10} | {:>8.3f} | {:>6.2f} | {:>10.1f} | {:>11.1f}".format(
-                    level, temp-273.15, rh*100, da, gph)
+            print "{0:>10} | {1:>8.3f} | {2:>6.2f} | {3:>{5}.1f} | {4:>{5}.1f}".format(
+                    level, temp-273.15, rh*100, da, hght, alt_str_len)
+
         if da > args.DA and prev_da < args.DA:
             if prev_da is None:
                 # TODO Is this the appropriate error type?
                 raise ValueError("Unable to interpolate: specified density altitude below lowest found DA.")
             alt_fmt = "{0:<.5g}"
             da_str = alt_fmt.format(args.DA)
-            interp_gph = interp1d(prev_da, da, args.DA, prev_gph, gph)
-            gph_str = alt_fmt.format(interp_gph)
+            interp_hght = interp1d(prev_da, da, args.DA, prev_hght, hght)
+            hght_str = alt_fmt.format(interp_hght)
             if args.print_units:
                 da_str += unit
-                gph_str += unit
+                hght_str += unit
             done = True
             if args.verbose <= 1:
                 break
+
         prev_da = da
-        prev_gph = gph
+        prev_hght = hght
 
     if done:
         if args.verbose >= 1:
-            print "Interpolated GPH for {} density altitude: {}".format(da_str, gph_str)
+            print "Interpolated MSL altitude for {} density altitude: {}".format(da_str, hght_str)
         else:
-            print gph_str
+            print hght_str
 
     else:
         raise ValueError("Unable to interpolate: specified density altitude above highest found DA.")
