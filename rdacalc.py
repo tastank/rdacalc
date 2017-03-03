@@ -124,18 +124,18 @@ if __name__ == "__main__":
         local_model_fn = download_ncep.download_ncep_model_data(
                 product=product,
                 fh=args.hour,
-                dir_=hrrr_dir)
+                dir_=model_dir)
     else:
-        hrrr_dir = None
-        local_hrrr_fn = args.grib_file
-    grib = pygrib.open(local_hrrr_fn)
+        model_dir = None
+        local_model_fn = args.grib_file
+    grib = pygrib.open(local_model_fn)
     temp_grib = get_temp_grib(grib)
     gph_grib = get_gph_grib(grib)
     rh_grib = get_rh_grib(grib)
     # HRRR files are large, so remove as soon as it's no longer needed
     if clean_up:
-        os.remove(local_hrrr_fn)
-        os.rmdir(hrrr_dir)
+        os.remove(local_model_fn)
+        os.rmdir(model_dir)
 
     if args.km:
         unit = "km"
