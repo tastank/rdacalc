@@ -119,6 +119,7 @@ if __name__ == "__main__":
     # TODO parse 'km' or 'm' from end of args.DA to determine unit
     parser.add_argument("--meters", "-m", action="store_true", help="Input and output in meters")
     parser.add_argument("--km", action="store_true", help="Input and output in meters")
+    parser.add_argument("--print-units", "-u", action="store_true", help="Print units")
     parser.add_argument("--verbose", "-v", action="count", help="Be verbose")
 
     args = parser.parse_args()
@@ -141,14 +142,20 @@ if __name__ == "__main__":
     if clean_up:
         os.remove(local_hrrr_fn)
 
+    if args.km:
+        unit = "km"
+    elif args.meters:
+        unit = "m"
+    else:
+        unit = "ft"
+    if args.verbose >= 2:
+        print "Press (mb) | Temp (C) | RH (%) | DA (gp {0:<2}) | MSL (gp {0:<2})".format(unit)
     if len(temp_grib) != len(gph_grib) or len(temp_grib) != len(rh_grib):
         raise IndexError("Temp, height, and humidity fields do not have same length!")
     idx = find_nearest_idx(temp_grib[0].values.shape,
             temp_grib[0].latitudes, temp_grib[0].longitudes,
             args.lat, args.lon)
     ix, iy = idx[0][0], idx[1][0]
-    if args.verbose >= 1:
-        print "Press (mb) | Temp (C) | RH (%) | DA (gp ft.) | MSL (gp ft.)"
     prev_da = None
     prev_gph = None
     done = False
@@ -158,32 +165,43 @@ if __name__ == "__main__":
         level = temp_grib[i].level
         temp = temp_grib[i].values[ix][iy]
         rh = rh_grib[i].values[ix][iy] / 100.0
-        if args.meters:
+        if unit == "m":
             da = density_alt(density(level, temp, rh))*1000 #km to m
             gph = gph_grib[i].values[ix][iy]
             unit = "m"
-        elif args.km:
+        elif unit == "km":
             da = density_alt(density(level, temp, rh))
             gph = gph_grib[i].values[ix][iy] / 1000 # m to km
             unit = "km"
         else: # Default unit is feet
             da = density_alt(density(level, temp, rh))*3280 #km to ft
             gph = gph_grib[i].values[ix][iy] * 3.28 # m to ft
-            unit = "ft"
-        if args.verbose >= 1:
-            print "{:>10} | {:>8.3f} | {:>6.2f} | {:>11.1f} | {:>12.1f}".format(
+        if args.verbose >= 2:
+            print "{:>10} | {:>8.3f} | {:>6.2f} | {:>10.1f} | {:>11.1f}".format(
                     level, temp-273.15, rh*100, da, gph)
         if da > args.DA and prev_da < args.DA:
             if prev_da is None:
                 # TODO Is this the appropriate error type?
                 raise ValueError("Unable to interpolate: specified density altitude below lowest found DA.")
-            print "Interpolated GPH for {0:<.5g}{2} density altitude: {1:<.5g}{2}".format(args.DA, interp1d(prev_da, da, args.DA, prev_gph, gph), unit)
+            alt_fmt = "{0:<.5g}"
+            da_str = alt_fmt.format(args.DA)
+            interp_gph = interp1d(prev_da, da, args.DA, prev_gph, gph)
+            gph_str = alt_fmt.format(interp_gph)
+            if args.units:
+                da_str += unit
+                gph_str += unit
             done = True
-            if args.verbose == 0:
+            if args.verbose <= 1:
                 break
         prev_da = da
         prev_gph = gph
 
-    if not done:
+    if done:
+        if args.verbose >= 1:
+            print "Interpolated GPH for {} density altitude: {}".format(da_str, gph_str)
+        else:
+            print gph_str
+
+    else:
         raise ValueError("Unable to interpolate: specified density altitude above highest found DA.")
 
