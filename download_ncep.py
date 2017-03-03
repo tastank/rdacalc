@@ -6,7 +6,7 @@ import tempfile
 from ftplib import FTP
 
 # download_hrrr_prsf() may be called several times over several minutes, so use one time rather than multiple utcnow() calls
-NCEP_FTP = "ftp.ncep.noaa.gov"ksdflkjasdflkjasdflkjsdfalkj
+NCEP_FTP = "ftp.ncep.noaa.gov"
 
 HRRR_TIME = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
 HRRR_DIR = "/pub/data/nccf/com/hrrr/prod/hrrr.%Y%m%d/"
